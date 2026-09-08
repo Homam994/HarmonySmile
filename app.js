@@ -18,55 +18,6 @@ function switchTab(tab) {
   currentTab = tab;
   updateProgress();
   updateTabArrows();
-
-  // ── Lazy init for referred tab ──────────────────────────────────────
-  // Wire selector must be built after the panel is visible (display:block)
-  if (tab === 'referred') {
-    const rws = document.getElementById('ref-wire-selector');
-    if (rws && !rws.children.length) {
-      buildWireSelector('ref-wire-selector');
-      // Restore saved wire state if present
-      const saved = localStorage.getItem('ortho_v4_referred');
-      if (saved) {
-        try {
-          const data = JSON.parse(saved);
-          const ws = data['wires__ref-wire-selector'];
-          if (ws && wireState['ref-wire-selector']) {
-            ['upper','lower'].forEach(arch => {
-              if (!ws[arch]) return;
-              wireState['ref-wire-selector'][arch] = ws[arch];
-              if (ws[arch].size) {
-                const chip = [...rws.querySelectorAll(`.wire-chip[data-arch="${arch}"][data-type="size"]`)]
-                  .find(c => c.dataset.val === ws[arch].size);
-                if (chip) {
-                  rws.querySelectorAll(`.wire-chip[data-arch="${arch}"][data-type="size"]`)
-                    .forEach(c => c.classList.remove('sel-size'));
-                  chip.classList.add('sel-size');
-                }
-              }
-              if (ws[arch].mat) {
-                const chip = [...rws.querySelectorAll(`.wire-chip[data-arch="${arch}"][data-type="mat"]`)]
-                  .find(c => c.dataset.val === ws[arch].mat);
-                if (chip) {
-                  rws.querySelectorAll(`.wire-chip[data-arch="${arch}"][data-type="mat"]`)
-                    .forEach(c => c.classList.remove('sel-mat'));
-                  chip.classList.add('sel-mat');
-                }
-              }
-            });
-          }
-        } catch(e) { /* ignore */ }
-      }
-    }
-    // Build ext chart if Other was previously selected
-    const extVal = document.querySelector('[name="ref-prev-ext"]:checked')?.value;
-    if (extVal === 'Other') {
-      const uw = document.getElementById('ref-ext-chart-upper');
-      const lw = document.getElementById('ref-ext-chart-lower');
-      if (uw && !uw.children.length) buildRefExtRow(uw, upperTeeth);
-      if (lw && !lw.children.length) buildRefExtRow(lw, lowerTeeth);
-    }
-  }
 }
 
 // ── Tab arrow scroll buttons ───────────────────────────────────────────
@@ -135,9 +86,6 @@ document.addEventListener('change', updateProgress);
 // ── Wire sizes & materials ─────────────────────────────────────────────
 const WIRE_SIZES = ['0.012','0.014','0.016','0.018','0.020','0.016×0.016','0.016×0.022','0.017×0.025','0.018×0.025','0.019×0.025','0.021×0.025'];
 const WIRE_MATS  = ['NiTi','SS','RCS NiTi','TMA'];
-
-// ── Shared clinical text constants ─────────────────────────────────────
-const ASEPTIC_TEXT = 'Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.';
 
 // Wire state: { containerId: { upper: {size, mat}, lower: {size, mat} } }
 const wireState = {};
@@ -216,7 +164,6 @@ function getWireText(containerId, arch) {
 }
 
 // Build wire selectors for all forms
-// Note: ref-wire-selector is built lazily on first tab activation (see switchTab)
 ['bond-wire-selector','fuf-wire-selector','em-wire-selector'].forEach(buildWireSelector);
 
 
@@ -374,6 +321,16 @@ function gmdPlanSummaryLines() {
 }
 
 // ── Appliance card toggling ────────────────────────────────────────────
+// ── Occlusal cant detail visibility ─────────────────────────────────────
+function updateOccCantVisibility() {
+  const val = document.querySelector('[name="occCant"]:checked')?.value || '';
+  const show = val && val !== 'None';
+  ['occCant-detail-side','occCant-detail-location','occCant-detail-cause'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = show ? '' : 'none';
+  });
+}
+
 function updateApplianceCard() {
   const val = document.querySelector('[name="plan-appliance-type"]:checked')?.value;
   const pff = document.getElementById('plan-fixed-fields');
@@ -516,7 +473,7 @@ function applyNotationToCharts() {
 
 function setNotation(system) {
   NOTATION = system;
-  safeStore('ortho_notation', system);
+  localStorage.setItem('ortho_notation', system);
   applyNotationToCharts();
 }
 
@@ -642,6 +599,16 @@ function collectFormData(tab) {
       R('Lip position — Lower', radio('lipLower'));
       R('Nasolabial angle',   radio('nasoAngle'));
 
+      S('Occlusal Plane / Canting');
+      const occCantVal = radio('occCant');
+      R('Occlusal cant', occCantVal);
+      if (occCantVal && occCantVal !== 'None') {
+        R('Cant side',        radio('occCantSide'));
+        R('Cant location',    radio('occCantLocation'));
+        R('Suspected origin', radio('occCantOrigin'));
+        R('Assessment method',radio('occCantMethod'));
+      }
+
       S('Dental Classification');
       R('Incisors', radio('incisorClass'));
       const br=radio('buccalRight'), bl=radio('buccalLeft');
@@ -726,7 +693,7 @@ function collectFormData(tab) {
       if(recs.length||isChk('aseptic-confirm')){
         S('Records & Aseptic');
         if(recs.length) R('Records taken', recs.join(', '));
-        if(isChk('aseptic-confirm')) RA(ASEPTIC_TEXT);
+        if(isChk('aseptic-confirm')) RA('Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.');
       }
 
       S('Assessment & Plan');
@@ -865,7 +832,7 @@ function collectFormData(tab) {
       if(inst.length) R('Instructions given', inst.join(', '));
       R('Next visit',  get('bond-nv'));
       R('Referral',    get('bond-referral'));
-      if(isChk('bond-aseptic')) RA(ASEPTIC_TEXT);
+      if(isChk('bond-aseptic')) RA('Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.');
       R('Notes',       get('bond-notes'));
       break;
     }
@@ -949,7 +916,7 @@ function collectFormData(tab) {
       S('Visit Completion');
       R('Next visit', get('fuf-nv'));
       R('Referral',   get('fuf-referral'));
-      if(isChk('fuf-aseptic')) RA(ASEPTIC_TEXT);
+      if(isChk('fuf-aseptic')) RA('Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.');
       R('Notes',      get('fuf-notes'));
       break;
     }
@@ -1004,7 +971,7 @@ function collectFormData(tab) {
       }
       R('Next visit', get('fua-nv'));
       R('Referral',   get('fua-referral'));
-      if(isChk('fua-aseptic')) RA(ASEPTIC_TEXT);
+      if(isChk('fua-aseptic')) RA('Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.');
       R('Notes',      get('fua-notes'));
       break;
     }
@@ -1068,7 +1035,7 @@ function collectFormData(tab) {
       if(ret.length) R('Interim retention', ret.join(', '));
       R('Next visit', get('fug-nv'));
       R('Referral',   get('fug-referral'));
-      if(isChk('fug-aseptic')) RA(ASEPTIC_TEXT);
+      if(isChk('fug-aseptic')) RA('Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.');
       R('Notes',      get('fug-notes'));
       break;
     }
@@ -1117,7 +1084,7 @@ function collectFormData(tab) {
       if(isChk('em-inst-callback'))  inst2.push('Call if worsens');
       if(inst2.length) R('Instructions given', inst2.join(', '));
       R('Follow-up plan', radio('em-return'));
-      if(isChk('em-aseptic')) RA(ASEPTIC_TEXT);
+      if(isChk('em-aseptic')) RA('Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.');
       R('Notes',    get('em-notes'));
       R('Referral', get('em-referral'));
       break;
@@ -1176,241 +1143,8 @@ function collectFormData(tab) {
       if(di.length) R('Instructions given', di.join(', '));
       R('Next visit', get('db-nv'));
       R('Referral',   get('db-referral'));
-      if(isChk('db-aseptic')) RA(ASEPTIC_TEXT);
+      if(isChk('db-aseptic')) RA('Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.');
       R('Treatment summary', get('db-notes'));
-      break;
-    }
-
-    // ══════════════════════════════════════
-    case 'referred': {
-      S('Referred Patient Assessment');
-      R('Patient',   get('ref-name'));
-      R('Age',       get('ref-age') ? get('ref-age')+' years' : '');
-      R('Clinician', get('ref-clinician'));
-      R('Date',      get('ref-date'));
-
-      S('Referral Details');
-      R('Referring clinician', get('ref-referring-clinician'));
-      R('Referring practice',  get('ref-referring-practice'));
-      const reasons = [...document.querySelectorAll('[name="ref-reason"]:checked')].map(e=>e.value);
-      R('Reason for referral', reasons.join(', '));
-      R('Referral reason details', get('ref-reason-detail'));
-      const recs=[];
-      if(isChk('ref-rec-opg'))    recs.push('OPG');
-      if(isChk('ref-rec-ceph'))   recs.push('Lateral cephalogram');
-      if(isChk('ref-rec-photos')) recs.push('Clinical photographs');
-      if(isChk('ref-rec-models')) recs.push('Study models / scans');
-      if(isChk('ref-rec-plan'))   recs.push('Previous treatment plan');
-      if(isChk('ref-rec-letter')) recs.push('Referral letter');
-      if(isChk('ref-rec-consent'))recs.push('Previous consent forms');
-      if(isChk('ref-rec-xrays')) recs.push('Periapical X-rays');
-      if(isChk('ref-rec-none'))   recs.push('No records received');
-      if(recs.length) R('Records received', recs.join(', '));
-      R('Records quality',    radio('ref-rec-quality'));
-      R('New records required', get('ref-new-records'));
-
-      S('Previous Treatment History');
-      R('Previous appliance',   radio('ref-prev-appliance'));
-      R('Previous prescription', radio('ref-prev-rx'));
-      R('Previous slot size',   radio('ref-prev-slot'));
-      R('Duration of previous treatment', get('ref-prev-duration'));
-      R('Approx. visits',       get('ref-prev-visits'));
-      R('Assessment interval',  get('ref-prev-interval'));
-      R('Stage at transfer',    radio('ref-prev-stage'));
-      const prevExt = radio('ref-prev-ext');
-      if (prevExt === 'Other') {
-        const teeth = [...refExtChartSet].sort((a,b)=>a-b).map(n=>toothLabel(n));
-        R('Extractions performed', teeth.length ? 'Other — '+teeth.join(', ') : 'Other (no teeth selected)');
-      } else {
-        R('Extractions performed', prevExt + (get('ref-prev-ext-detail') ? ' — '+get('ref-prev-ext-detail') : ''));
-      }
-      const aux=[];
-      if(isChk('ref-aux-tad'))        aux.push('TADs / mini-screws');
-      if(isChk('ref-aux-elastics'))   aux.push('Elastics');
-      if(isChk('ref-aux-hg'))         aux.push('Headgear');
-      if(isChk('ref-aux-functional')) aux.push('Fixed functional');
-      if(isChk('ref-aux-tpa'))        aux.push('TPA / Nance');
-      if(isChk('ref-aux-none'))       aux.push('None documented');
-      if(aux.length) R('Active auxiliaries at transfer', aux.join(', '));
-      R('Auxiliary details', get('ref-aux-detail'));
-      R('Previous compliance', radio('ref-prev-compliance'));
-      R('Previous treatment summary', get('ref-prev-summary'));
-
-      S('Clinical Assessment at Transfer');
-      R('Appliance condition', radio('ref-appliance-cond'));
-      R('Bracket integrity',   radio('ref-bracket-cond'));
-      const rwU = getWireText('ref-wire-selector','upper');
-      const rwL = getWireText('ref-wire-selector','lower');
-      if(rwU) R('Archwire — Upper', rwU);
-      if(rwL) R('Archwire — Lower', rwL);
-      R('Wire appropriateness', radio('ref-wire-appropriate'));
-      const ojV=get('ref-oj-val'), ojS=radio('ref-oj-status');
-      R('Overjet at transfer',  [ojS, ojV?ojV+' mm':''].filter(Boolean).join(' — '));
-      const obV=get('ref-ob-val'), obS=radio('ref-ob-status');
-      R('Overbite at transfer', [obS, obV?obV+' mm':''].filter(Boolean).join(' — '));
-      const bR=radio('ref-buccal-r'), bL=radio('ref-buccal-l');
-      if(bR||bL) R('Buccal relation', `Right: ${bR||'—'}   |   Left: ${bL||'—'}`);
-      R('Upper midline', radio('ref-upper-mid'));
-      R('Lower midline', radio('ref-lower-mid'));
-      R('White spot lesions', radio('ref-wsl'));
-      R('Periodontal status', radio('ref-perio'));
-      R('Root resorption',    radio('ref-root-resorption'));
-      R('Root parallelism',   radio('ref-root-parallel'));
-      R('Clinical notes',     get('ref-clinical-notes'));
-
-      S('Treatment Progress Audit');
-      R('Original objectives', get('ref-orig-objectives'));
-      const objs=[];
-      if(isChk('ref-obj-align'))     objs.push('Alignment completed');
-      if(isChk('ref-obj-level'))     objs.push('Leveling completed');
-      if(isChk('ref-obj-space'))     objs.push('Space closure completed');
-      if(isChk('ref-obj-oj'))        objs.push('OJ correction completed');
-      if(isChk('ref-obj-ob'))        objs.push('OB correction completed');
-      if(isChk('ref-obj-midline'))   objs.push('Midline corrected');
-      if(isChk('ref-obj-transverse'))objs.push('Transverse corrected');
-      if(isChk('ref-obj-molar'))     objs.push('Molar Class I achieved');
-      if(isChk('ref-obj-none'))      objs.push('None completed yet');
-      if(objs.length) R('Objectives achieved so far', objs.join(', '));
-      R('Estimated remaining time', radio('ref-remaining-time'));
-      R('Complexity at transfer',   radio('ref-complexity'));
-
-      S('Clinical Decision');
-      R('Treatment decision', radio('ref-decision'));
-      const mods=[];
-      if(isChk('ref-mod-rebracket'))   mods.push('Change bracket prescription / re-bracket');
-      if(isChk('ref-mod-reposition'))  mods.push('Bracket repositioning');
-      if(isChk('ref-mod-extract'))     mods.push('Extract teeth not previously extracted');
-      if(isChk('ref-mod-tad'))         mods.push('Add TAD / mini-screw anchorage');
-      if(isChk('ref-mod-retention'))   mods.push('Modify retention plan');
-      if(isChk('ref-mod-objectives'))  mods.push('Alter finishing objectives (compromise)');
-      if(isChk('ref-mod-perio'))       mods.push('Perio treatment required');
-      if(isChk('ref-mod-restorative')) mods.push('Restorative work required');
-      if(mods.length) R('Modifications required', mods.join(', '));
-      R('Modification details', get('ref-mod-detail'));
-      R('Consent status',       radio('ref-consent'));
-      R('Financial arrangement', radio('ref-financial'));
-      R('Agreed fee', get('ref-fee') ? 'SAR '+get('ref-fee') : '');
-
-      S('Communication & Documentation');
-      R('Communication with referring clinician', radio('ref-comm'));
-      R('Patient / parent concerns', get('ref-patient-concerns'));
-      R('Plan moving forward',        get('ref-plan-forward'));
-      R('Next visit purpose',         get('ref-next-visit'));
-      if(isChk('ref-aseptic')) RA(ASEPTIC_TEXT);
-      R('Additional notes', get('ref-notes'));
-      break;
-    }
-
-    // ══════════════════════════════════════
-    case 'retention': {
-      S('Retention Follow-Up Visit');
-      R('Patient',          get('ret-name'));
-      R('Retention visit #', get('ret-visit-no'));
-      R('Clinician',        get('ret-clinician'));
-      R('Date',             get('ret-date'));
-      R('Time since debond', get('ret-time-since-debond'));
-
-      S('Retention Phase & Protocol');
-      R('Current phase', radio('ret-phase'));
-      const proto=[];
-      if(isChk('ret-proto-fixed-upper')) proto.push('Fixed retainer — Upper');
-      if(isChk('ret-proto-fixed-lower')) proto.push('Fixed retainer — Lower');
-      if(isChk('ret-proto-vfr'))         proto.push('VFR / Essix');
-      if(isChk('ret-proto-hawley'))      proto.push('Hawley retainer');
-      if(isChk('ret-proto-spring'))      proto.push('Spring retainer');
-      if(proto.length) R('Protocol in place', proto.join(', '));
-
-      S('Fixed Retainer Assessment');
-      // Upper
-      const frUI = radio('ret-fr-upper-integrity');
-      const frUP = radio('ret-fr-upper-plaque');
-      if(frUI) {
-        const upperTeethSel = [...retChartSets.upper].sort((a,b)=>a-b).map(n=>toothLabel(n));
-        const teethStr = upperTeethSel.length ? ` — teeth: ${upperTeethSel.join(', ')}` : '';
-        R('Upper fixed retainer — integrity', frUI + teethStr);
-      }
-      R('Upper — plaque / calculus', frUP);
-      // Lower
-      const frLI = radio('ret-fr-lower-integrity');
-      const frLP = radio('ret-fr-lower-plaque');
-      if(frLI) {
-        const lowerTeethSel = [...retChartSets.lower].sort((a,b)=>a-b).map(n=>toothLabel(n));
-        const teethStr = lowerTeethSel.length ? ` — teeth: ${lowerTeethSel.join(', ')}` : '';
-        R('Lower fixed retainer — integrity', frLI + teethStr);
-      }
-      R('Lower — plaque / calculus', frLP);
-      // Actions
-      const frActions=[];
-      if(isChk('ret-action-rebond'))         frActions.push('Re-bond');
-      if(isChk('ret-action-replace-same'))   frActions.push('Replace wire — same design');
-      if(isChk('ret-action-replace-diff'))   frActions.push('Replace wire — different design');
-      if(isChk('ret-action-sap'))            frActions.push('Scale & polish around retainer');
-      if(isChk('ret-action-trim'))           frActions.push('Wire trimmed / adjusted');
-      if(isChk('ret-action-none'))           frActions.push('No action required');
-      if(isChk('ret-action-remove-patient')) frActions.push('Removed — patient request');
-      if(isChk('ret-action-remove-perio'))   frActions.push('Removed — periodontal reasons');
-      if(isChk('ret-action-remove-end'))     frActions.push('Removed — planned end of retention');
-      if(frActions.length) R('Action taken on fixed retainer', frActions.join(', '));
-      R('Wire type used',              radio('ret-wire-type'));
-      R('Occlusal interference',       radio('ret-occlusal-interference'));
-      R('Fixed retainer notes',        get('ret-fixed-notes'));
-
-      S('Removable Retainer Assessment');
-      R('Fit',                    radio('ret-removable-fit'));
-      R('Condition',              radio('ret-removable-condition'));
-      R('Wear compliance',        radio('ret-wear-compliance'));
-      R('Compliance evidence',    radio('ret-compliance-evidence'));
-      R('Action taken',           radio('ret-removable-action'));
-      R('Removable retainer notes', get('ret-removable-notes'));
-
-      S('Occlusal Stability Assessment');
-      R('Upper arch alignment',   radio('ret-align-upper'));
-      R('Lower arch alignment',   radio('ret-align-lower'));
-      const ojV=get('ret-oj-val'), ojS=radio('ret-oj-status');
-      R('Overjet',  [ojV?ojV+' mm':'', ojS].filter(Boolean).join(' — '));
-      const obV=get('ret-ob-val'), obS=radio('ret-ob-status');
-      R('Overbite', [obV?obV+' mm':'', obS].filter(Boolean).join(' — '));
-      const bR=radio('ret-buccal-r'), bL=radio('ret-buccal-l');
-      if(bR||bL) R('Buccal occlusion', `Right: ${bR||'—'}   |   Left: ${bL||'—'}`);
-      R('Midline', radio('ret-midline'));
-      const spVal=radio('ret-spaces'), spDet=get('ret-spaces-detail');
-      R('Spaces', spVal?(spDet?`${spVal} — ${spDet}`:spVal):'');
-      const risks=[];
-      if(isChk('ret-risk-3rd-molar'))    risks.push('Third molar eruption pressure');
-      if(isChk('ret-risk-growth'))        risks.push('Continued mandibular growth');
-      if(isChk('ret-risk-perio'))         risks.push('Periodontal / bone loss');
-      if(isChk('ret-risk-parafunction'))  risks.push('Parafunction');
-      if(isChk('ret-risk-habit'))         risks.push('Tongue thrust / lip habit');
-      if(isChk('ret-risk-compliance'))    risks.push('Poor retainer compliance');
-      if(isChk('ret-risk-failure'))       risks.push('Retainer failure');
-      if(isChk('ret-risk-none'))          risks.push('No risk factors identified');
-      if(risks.length) R('Relapse risk factors', risks.join(', '));
-      R('Overall relapse severity', radio('ret-relapse'));
-      const wslVal=radio('ret-wsl');
-      const wslTx=[];
-      if(isChk('ret-wsl-fluoride')) wslTx.push('Fluoride varnish applied');
-      if(isChk('ret-wsl-cppacp'))   wslTx.push('CPP-ACP prescribed');
-      R('WSL status', [wslVal, ...wslTx].filter(Boolean).join('; '));
-
-      S('Clinical Decision');
-      R('Decision', radio('ret-decision'));
-      R('Next visit interval', radio('ret-next-interval'));
-      // Discharge criteria
-      const dc=[];
-      if(isChk('ret-dc-stable'))          dc.push('Occlusion stable ≥2 years');
-      if(isChk('ret-dc-lifelong'))        dc.push('Lifelong wear discussed');
-      if(isChk('ret-dc-fixed-ok'))        dc.push('Fixed retainer intact');
-      if(isChk('ret-dc-removable-given')) dc.push('Removable provided as backup');
-      if(isChk('ret-dc-signs'))           dc.push('Signs of relapse discussed');
-      if(isChk('ret-dc-gp'))              dc.push('GDP notified');
-      if(dc.length) R('Discharge criteria met', dc.join(', '));
-      R('Referral', get('ret-referral'));
-
-      S('Visit Completion');
-      R('Oral hygiene', radio('ret-oh'));
-      R('Patient concerns', get('ret-patient-concerns'));
-      if(isChk('ret-aseptic')) RA(ASEPTIC_TEXT);
-      R('Notes', get('ret-notes'));
       break;
     }
 
@@ -1463,7 +1197,7 @@ function collectFormData(tab) {
       S('Session Follow-Up');
       R('Next visit', get('tad-nv'));
       R('Referral',   get('tad-referral'));
-      if(isChk('tad-aseptic')) RA(ASEPTIC_TEXT);
+      if(isChk('tad-aseptic')) RA('Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.');
       R('Notes',      get('tad-notes'));
       break;
     }
@@ -1500,20 +1234,6 @@ function getCurrentSummary() {
 
 
 // ── Toast ──────────────────────────────────────────────────────────────
-// ── Safe localStorage wrapper ─────────────────────────────────────────
-// Handles QuotaExceededError (Private Mode / full storage) gracefully
-function safeStore(key, value) {
-  try {
-    localStorage.setItem(key, value);
-    return true;
-  } catch(e) {
-    // QuotaExceededError or SecurityError (Private Mode in some browsers)
-    console.warn('[EasyOrtho] localStorage write failed:', key, e.name);
-    showToast('⚠️ Storage full — draft not saved. Free up space or use Export.', 'error');
-    return false;
-  }
-}
-
 function showToast(msg, type='success') {
   const t = document.getElementById('toast');
   t.textContent=msg; t.className='toast '+type;
@@ -1549,8 +1269,6 @@ const TAB_LABELS = {
   'emergency':  'Emergency Visit',
   'debond':     'Debond & Retainer',
   'tad':        'TAD / Mini-screw',
-  'referred':   'Referred Patient Assessment',
-  'retention':  'Retention Follow-Up',
 };
 
 
@@ -1622,10 +1340,11 @@ function printSummary() {
   const html = buildPrintHTML();
   if (!html) { showToast('⚠️ Nothing to print yet','error'); return; }
 
-  // ── فتح نافذة طباعة منفصلة ────────────────────────────────────────
+  // ── فتح نافذة طباعة منفصلة مع styles مضمنة ─────────────────────────
+  // هذا يضمن أن الـ CSS يعمل بغض النظر عن كيفية تحميل الملفات
   const printWin = window.open('', '_blank', 'width=900,height=700');
   if (!printWin) {
-    // fallback: overlay في نفس الصفحة إذا منع المتصفح النوافذ المنبثقة
+    // fallback: استخدام الـ overlay إذا منع المتصفح النافذة الجديدة
     const overlay = document.getElementById('print-overlay');
     const doc     = document.getElementById('print-doc-content');
     doc.innerHTML = html;
@@ -1640,66 +1359,56 @@ function printSummary() {
     return;
   }
 
-  // ── دالة كتابة نافذة الطباعة ──────────────────────────────────────
-  function writePrintWindow(css) {
-    const styleBlock = css
-      ? `<style>${css}\nbody>*{display:block!important}#print-overlay{display:block!important;position:static!important}body{background:white!important}</style>`
-      : `<link rel="stylesheet" href="./app.css">`;
-    printWin.document.write(`<!DOCTYPE html>
+  // جلب الـ CSS الخارجي وتضمينه في نافذة الطباعة
+  fetch('./app.css')
+    .then(r => r.text())
+    .then(css => {
+      printWin.document.write(`<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>EasyOrtho — Clinical Summary</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-${styleBlock}
+<style>
+${css}
+/* ── Override للطباعة: إظهار كل شيء ── */
+body > * { display: block !important; }
+#print-overlay { display: block !important; position: static !important; }
+body { background: white !important; }
+</style>
 </head>
 <body>
 <div id="print-overlay" style="display:block;position:static;">
-  <div class="print-doc">${html}</div>
+  <div class="print-doc">
+    ${html}
+  </div>
 </div>
 </body>
 </html>`);
-    printWin.document.close();
-    // انتظر تحميل الـ fonts ثم اطبع
-    printWin.onload = () => {
-      setTimeout(() => { printWin.focus(); printWin.print(); setTimeout(() => printWin.close(), 1000); }, 600);
-    };
-    // fallback timeout إذا لم يُطلق onload
-    setTimeout(() => {
-      if (!printWin.closed) {
-        printWin.focus(); printWin.print();
-        setTimeout(() => printWin.close(), 1000);
-      }
-    }, 1800);
-  }
-
-  // ── Cache-first CSS strategy (يعمل offline) ────────────────────────
-  // 1. حاول من SW Cache أولاً (فوري + يعمل offline)
-  // 2. fallback لـ fetch (online فقط)
-  // 3. fallback نهائي: اطبع بدون CSS inline
-  const cssUrl = './app.css';
-
-  if ('caches' in window) {
-    caches.match(cssUrl)
-      .then(cachedResponse => {
-        if (cachedResponse) {
-          return cachedResponse.text();
+      printWin.document.close();
+      // انتظر تحميل الـ fonts ثم اطبع
+      printWin.onload = () => {
+        setTimeout(() => {
+          printWin.focus();
+          printWin.print();
+          setTimeout(() => printWin.close(), 1000);
+        }, 600);
+      };
+      // fallback إذا لم يُطلق onload
+      setTimeout(() => {
+        if (!printWin.closed) {
+          printWin.focus();
+          printWin.print();
+          setTimeout(() => printWin.close(), 1000);
         }
-        // ليس في الـ cache — حاول الشبكة
-        return fetch(cssUrl, { cache: 'force-cache' }).then(r => r.text());
-      })
-      .then(css => writePrintWindow(css))
-      .catch(() => {
-        // فشل كل شيء — اطبع مع رابط CSS الخارجي (يعمل إذا كان الملف متاحاً)
-        writePrintWindow(null);
-      });
-  } else {
-    // متصفح لا يدعم Cache API — استخدم fetch مباشرة
-    fetch(cssUrl)
-      .then(r => r.text())
-      .then(css => writePrintWindow(css))
-      .catch(() => writePrintWindow(null));
-  }
+      }, 1500);
+    })
+    .catch(() => {
+      // إذا فشل جلب CSS، اطبع بدونه
+      printWin.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>EasyOrtho</title></head><body>${html}</body></html>`);
+      printWin.document.close();
+      setTimeout(() => { printWin.print(); setTimeout(() => printWin.close(), 500); }, 400);
+    });
 }
 
 // ── Save / Load / Clear ────────────────────────────────────────────────
@@ -1713,7 +1422,7 @@ function saveCurrentForm() {
     else if(el.id) data[el.id]=el.value;
   });
   // Save wire states for this panel
-  ['bond-wire-selector','fuf-wire-selector','em-wire-selector','ref-wire-selector'].forEach(cid=>{
+  ['bond-wire-selector','fuf-wire-selector','em-wire-selector'].forEach(cid=>{
     if(wireState[cid]) data['wires__'+cid]=wireState[cid];
   });
   if(currentTab==='fu-fixed'){
@@ -1732,19 +1441,8 @@ function saveCurrentForm() {
   if(currentTab==='fu-fixed')  data['_fu_tad_fuf']=fuTadState['fuf'];
   if(currentTab==='fu-aligner') data['_fu_tad_fua']=fuTadState['fua'];
   if(currentTab==='plan') data['_ext_chart']=[...extChartSet];
-  if(currentTab==='referred') data['_ref_ext_chart']=[...refExtChartSet];
-  if(currentTab==='retention'){
-    data['_ret_chart_upper']=[...retChartSets.upper];
-    data['_ret_chart_lower']=[...retChartSets.lower];
-  }
   if(currentTab==='exam') data['__teeth']={...toothState};
-  // TAD screws — collect active screw first then save full array
-  if(currentTab==='tad'){
-    if(tadActiveScrewIdx >= 0) tadCollectScrew(tadActiveScrewIdx);
-    data['_tad_screws']        = tadScrews;
-    data['_tad_active_idx']    = tadActiveScrewIdx;
-  }
-  safeStore('ortho_v4_'+currentTab, JSON.stringify(data));
+  localStorage.setItem('ortho_v4_'+currentTab, JSON.stringify(data));
   showToast('💾 Draft saved!','success');
 }
 
@@ -1777,61 +1475,6 @@ function loadForm(tab) {
             }
           }
         });
-      }
-      return;
-    }
-    if(key==='_tad_screws'){
-      if(Array.isArray(data[key]) && data[key].length){
-        tadScrews = data[key];
-        tadActiveScrewIdx = data['_tad_active_idx'] ?? 0;
-        // Rebuild UI after DOM is ready
-        setTimeout(() => {
-          tadRenderTabs();
-          if(tadActiveScrewIdx >= 0 && tadScrews[tadActiveScrewIdx]){
-            tadRenderScrewCard(tadActiveScrewIdx);
-          }
-        }, 50);
-      }
-      return;
-    }
-    if(key==='_tad_active_idx') return; // handled above with _tad_screws
-    if(key==='_ret_chart_upper'){
-      retChartSets.upper.clear();
-      (data[key]||[]).forEach(n => retChartSets.upper.add(n));
-      // Rebuild chart if visible (tab was active)
-      setTimeout(() => {
-        const intVal = document.querySelector('[name="ret-fr-upper-integrity"]:checked')?.value || '';
-        if(intVal && intVal !== 'Intact — all bonding points secure' && intVal !== 'No upper fixed retainer') {
-          toggleRetChart('upper');
-        }
-      }, 100);
-      return;
-    }
-    if(key==='_ret_chart_lower'){
-      retChartSets.lower.clear();
-      (data[key]||[]).forEach(n => retChartSets.lower.add(n));
-      setTimeout(() => {
-        const intVal = document.querySelector('[name="ret-fr-lower-integrity"]:checked')?.value || '';
-        if(intVal && intVal !== 'Intact — all bonding points secure' && intVal !== 'No lower fixed retainer') {
-          toggleRetChart('lower');
-        }
-      }, 100);
-      return;
-    }
-    if(key==='_ref_ext_chart'){
-      refExtChartSet.clear();
-      (data[key]||[]).forEach(n => refExtChartSet.add(n));
-      // إعادة بناء الـ chart إذا كان Other مختاراً وكان التبويب مرئياً
-      const extVal = data['radio__ref-prev-ext'];
-      if (extVal === 'Other') {
-        setTimeout(() => {
-          toggleRefExtChart();
-          const lbl = document.getElementById('ref-ext-chart-selected');
-          if (lbl) {
-            const sorted = [...refExtChartSet].sort((a,b)=>a-b).map(n=>toothLabel(n));
-            lbl.textContent = sorted.length ? sorted.join(', ') : '—';
-          }
-        }, 100);
       }
       return;
     }
@@ -1935,12 +1578,8 @@ function clearCurrentForm() {
   if(currentTab==='exam'){
     [...upperTeeth,...lowerTeeth].forEach(num=>{ toothState[num]=0; });
   }
-  // Extraction charts
+  // Extraction chart (plan)
   extChartSet.clear();
-  refExtChartSet.clear();
-  // Retention charts
-  retChartSets.upper.clear();
-  retChartSets.lower.clear();
   // Emergency pills
   activeEmPills.clear();
   Object.keys(emChartSets).forEach(val => emChartSets[val].clear());
@@ -2049,6 +1688,12 @@ function clearCurrentForm() {
     if(el) el.style.display='none';
   });
 
+  // 3l-i. Occlusal cant details — hide until re-selected
+  ['occCant-detail-side','occCant-detail-location','occCant-detail-cause'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display='none';
+  });
+
   // 3l. CS stage highlights
   for(let i=1;i<=6;i++){
     const lbl=document.getElementById('cs-lbl-'+i);
@@ -2103,43 +1748,10 @@ function clearCurrentForm() {
 
   // ── Step 4: إعادة تفعيل aseptic checkboxes ──
   ['aseptic-confirm','bond-aseptic','fuf-aseptic','fua-aseptic',
-   'fug-aseptic','em-aseptic','db-aseptic','tad-aseptic','ref-aseptic','ret-aseptic'].forEach(id=>{
+   'fug-aseptic','em-aseptic','db-aseptic','tad-aseptic'].forEach(id=>{
     const el=document.getElementById(id);
     if(el) el.checked=true;
   });
-
-  // ── Step 4b: إعادة تهيئة referred tab ──
-  if(currentTab==='referred'){
-    const dd=document.getElementById('ref-decision-detail');
-    if(dd) dd.style.display='none';
-    const rws=document.getElementById('ref-wire-selector');
-    if(rws && rws.children.length){
-      rws.innerHTML=''; delete wireState['ref-wire-selector']; buildWireSelector('ref-wire-selector');
-    }
-    const refExtWrap  = document.getElementById('ref-ext-chart-wrap');
-    const refExtUpper = document.getElementById('ref-ext-chart-upper');
-    const refExtLower = document.getElementById('ref-ext-chart-lower');
-    const refExtLbl   = document.getElementById('ref-ext-chart-selected');
-    if(refExtWrap)  refExtWrap.style.display='none';
-    if(refExtUpper) refExtUpper.innerHTML='';
-    if(refExtLower) refExtLower.innerHTML='';
-    if(refExtLbl)   refExtLbl.textContent='—';
-  }
-
-  // ── Step 4c: إعادة تهيئة retention tab ──
-  if(currentTab==='retention'){
-    // إخفاء discharge wrap و debond charts
-    const retDischarge = document.getElementById('ret-discharge-wrap');
-    if(retDischarge) retDischarge.style.display='none';
-    ['upper','lower'].forEach(arch=>{
-      const wrap = document.getElementById(`ret-chart-${arch}-wrap`);
-      const row  = document.getElementById(`ret-chart-${arch}-row`);
-      const lbl  = document.getElementById(`ret-chart-${arch}-selected`);
-      if(wrap) wrap.style.display='none';
-      if(row)  row.innerHTML='';
-      if(lbl)  lbl.textContent='—';
-    });
-  }
 
   // ── Step 5: تحديثات UI نهائية ──
   markSaved(currentTab);
@@ -2544,18 +2156,6 @@ function fuTadSummaryLines(prefix) {
 
 
 // ── Admin schema integration ───────────────────────────────────────────
-// ── Clinician Autocomplete — populate datalist from admin schema ───────
-function updateClinicianDatalist(clinicians) {
-  const dl = document.getElementById('clinician-list-datalist');
-  if (!dl) return;
-  dl.innerHTML = '';
-  (clinicians || []).filter(Boolean).forEach(name => {
-    const opt = document.createElement('option');
-    opt.value = name;
-    dl.appendChild(opt);
-  });
-}
-
 function applyAdminSchema() {
   const saved = localStorage.getItem('ortho_admin_schema');
   if (!saved) return;
@@ -2566,20 +2166,11 @@ function applyAdminSchema() {
     if (schema.wireSizes) WIRE_SIZES.length = 0, schema.wireSizes.forEach(s => WIRE_SIZES.push(s));
     if (schema.wireMats)  WIRE_MATS.length  = 0, schema.wireMats.forEach(m => WIRE_MATS.push(m));
 
-    // Update clinician autocomplete datalist
-    if (schema.clinicians) updateClinicianDatalist(schema.clinicians);
-
     // Rebuild wire selectors with new options
-    // ref-wire-selector is rebuilt lazily — only if it already has children (tab was visited)
     ['bond-wire-selector','fuf-wire-selector','em-wire-selector'].forEach(id => {
       const el = document.getElementById(id);
       if (el) { el.innerHTML = ''; delete wireState[id]; buildWireSelector(id); }
     });
-    // Rebuild ref-wire-selector only if already built (tab was visited at least once)
-    const refWs = document.getElementById('ref-wire-selector');
-    if (refWs && refWs.children.length) {
-      refWs.innerHTML = ''; delete wireState['ref-wire-selector']; buildWireSelector('ref-wire-selector');
-    }
 
     // Apply field options to toggle groups
     if (schema.fields) {
@@ -2997,100 +2588,7 @@ function tadCollectScrew(idx) {
   sc.loadingNotes   = document.getElementById(fid('loadingNotes'))?.value||'';
 }
 
-// ══════════════════════════════════════════════════════════════
-// REFERRED PATIENT — helper functions
-// ══════════════════════════════════════════════════════════════
-
-// Extraction chart for referred tab
-const refExtChartSet = new Set();
-
-function toggleRefExtChart() {
-  const val  = document.querySelector('[name="ref-prev-ext"]:checked')?.value || '';
-  const wrap = document.getElementById('ref-ext-chart-wrap');
-  if (!wrap) return;
-  if (val === 'Other') {
-    wrap.style.display = '';
-    const upperRow = document.getElementById('ref-ext-chart-upper');
-    const lowerRow = document.getElementById('ref-ext-chart-lower');
-    if (upperRow && !upperRow.children.length) buildRefExtRow(upperRow, upperTeeth);
-    if (lowerRow && !lowerRow.children.length) buildRefExtRow(lowerRow, lowerTeeth);
-  } else {
-    wrap.style.display = 'none';
-  }
-}
-
-function buildRefExtRow(rowEl, teeth) {
-  rowEl.innerHTML = '';
-  teeth.forEach((num, i) => {
-    if (i === 8) {
-      const sp = document.createElement('div');
-      sp.style.cssText = 'width:4px;border-left:2px dashed var(--gold);margin:0 1px;flex-shrink:0;';
-      rowEl.appendChild(sp);
-    }
-    const btn = document.createElement('div');
-    btn.className = 'mini-tooth' + (refExtChartSet.has(num) ? ' selected' : '');
-    btn.textContent = toothLabel(num);
-    btn.dataset.fdi = num;
-    btn.onclick = () => {
-      const n = parseInt(btn.dataset.fdi);
-      if (refExtChartSet.has(n)) refExtChartSet.delete(n);
-      else refExtChartSet.add(n);
-      btn.classList.toggle('selected');
-      const lbl = document.getElementById('ref-ext-chart-selected');
-      if (lbl) {
-        const sorted = [...refExtChartSet].sort((a,b)=>a-b).map(n=>toothLabel(n));
-        lbl.textContent = sorted.length ? sorted.join(', ') : '—';
-      }
-    };
-    rowEl.appendChild(btn);
-  });
-}
-
-function updateRefDecision() {
-  const val = document.querySelector('[name="ref-decision"]:checked')?.value || '';
-  const detail = document.getElementById('ref-decision-detail');
-  if (!detail) return;
-  const showDetail = val && val !== 'Continue treatment — original plan appropriate';
-  detail.style.display = showDetail ? '' : 'none';
-}
-
-// ══════════════════════════════════════════════════════════════
-// RETENTION FOLLOW-UP — helper functions
-// ══════════════════════════════════════════════════════════════
-
-const retChartSets = {
-  upper: new Set(),
-  lower: new Set(),
-};
-
-function toggleRetChart(arch) {
-  const integrityVal = document.querySelector(`[name="ret-fr-${arch}-integrity"]:checked`)?.value || '';
-  const wrap = document.getElementById(`ret-chart-${arch}-wrap`);
-  if (!wrap) return;
-  const needsChart = integrityVal === 'Partial debond'
-    || integrityVal === 'Complete debond — retainer detached'
-    || integrityVal === 'Wire fracture'
-    || integrityVal === 'Wire distortion noted';
-  wrap.style.display = needsChart ? '' : 'none';
-  if (needsChart) {
-    const rowEl = document.getElementById(`ret-chart-${arch}-row`);
-    if (rowEl && !rowEl.children.length) {
-      const teeth = arch === 'upper' ? upperTeeth : lowerTeeth;
-      buildMiniChart(`ret-chart-${arch}-row`, retChartSets[arch], () => {
-        const lbl = document.getElementById(`ret-chart-${arch}-selected`);
-        if (lbl) lbl.textContent = selectedLabel(retChartSets[arch]);
-      }, teeth);
-    }
-  }
-}
-
-function updateRetDecision() {
-  const val = document.querySelector('[name="ret-decision"]:checked')?.value || '';
-  const dischargeWrap = document.getElementById('ret-discharge-wrap');
-  if (!dischargeWrap) return;
-  dischargeWrap.style.display = val.startsWith('Discharge') ? '' : 'none';
-}
-
+// ── Listen for admin changes (when admin panel is open in another tab) ─
 window.addEventListener('storage', e => {
   // FIX: handle ortho_notation FIRST to ensure it's set before applyAdminSchema reads it
   if (e.key === 'ortho_notation' && e.newValue) {
@@ -3155,7 +2653,7 @@ function autoSaveTab(tab) {
   });
 
   // Wire states
-  ['bond-wire-selector','fuf-wire-selector','em-wire-selector','ref-wire-selector'].forEach(cid => {
+  ['bond-wire-selector','fuf-wire-selector','em-wire-selector'].forEach(cid => {
     if (wireState[cid]) data['wires__' + cid] = wireState[cid];
   });
   if (tab === 'fu-fixed') {
@@ -3171,19 +2669,9 @@ function autoSaveTab(tab) {
   }
   if (tab === 'emergency') data['_em_pills'] = [...activeEmPills];
   if (tab === 'exam')      data['__teeth']   = { ...toothState };
-  if (tab === 'referred')  data['_ref_ext_chart'] = [...refExtChartSet];
-  if (tab === 'retention') {
-    data['_ret_chart_upper'] = [...retChartSets.upper];
-    data['_ret_chart_lower'] = [...retChartSets.lower];
-  }
-  if (tab === 'tad') {
-    if (tadActiveScrewIdx >= 0) tadCollectScrew(tadActiveScrewIdx);
-    data['_tad_screws']     = tadScrews;
-    data['_tad_active_idx'] = tadActiveScrewIdx;
-  }
 
-  safeStore('ortho_v4_' + tab, JSON.stringify(data));
-  safeStore('ortho_v4_autosave_time', Date.now().toString());
+  localStorage.setItem('ortho_v4_' + tab, JSON.stringify(data));
+  localStorage.setItem('ortho_v4_autosave_time', Date.now().toString());
   markSaved(tab);
 }
 
@@ -3258,7 +2746,7 @@ document.addEventListener('keydown', e => {
 });
 
 function cycleTab(dir) {
-  const tabIds = ['exam','plan','bond','fu-fixed','fu-aligner','fu-gmd','emergency','debond','tad','referred','retention'];
+  const tabIds = ['exam','plan','bond','fu-fixed','fu-aligner','fu-gmd','emergency','debond','tad'];
   const cur = tabIds.indexOf(currentTab);
   const next = (cur + dir + tabIds.length) % tabIds.length;
   switchTab(tabIds[next]);
@@ -3270,7 +2758,7 @@ function cycleTab(dir) {
   document.querySelectorAll('input[type="date"]').forEach(el=>el.value=today);
 
   // Default: all aseptic checkboxes checked
-  ['aseptic-confirm','bond-aseptic','fuf-aseptic','fua-aseptic','em-aseptic','db-aseptic','ref-aseptic','ret-aseptic'].forEach(id=>{
+  ['aseptic-confirm','bond-aseptic','fuf-aseptic','fua-aseptic','em-aseptic','db-aseptic'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.checked=true;
   });
 
@@ -3282,15 +2770,6 @@ function cycleTab(dir) {
     const name = e.target.name;
     const id   = e.target.id;
 
-    // Referred patient decision & extraction chart
-    if (name === 'ref-decision')  updateRefDecision();
-    if (name === 'ref-prev-ext')  toggleRefExtChart();
-
-    // Retention follow-up
-    if (name === 'ret-fr-upper-integrity') toggleRetChart('upper');
-    if (name === 'ret-fr-lower-integrity') toggleRetChart('lower');
-    if (name === 'ret-decision')           updateRetDecision();
-
     // GMD category & appliance type
     if (name === 'gmd-category')        updateGmdCategory();
     if (name === 'gmd-removable-type' || name === 'gmd-fixed-type') updateGmdDetailSection();
@@ -3299,6 +2778,9 @@ function cycleTab(dir) {
 
     // Extraction chart
     if (name === 'plan-ext')            toggleExtChart();
+
+    // Occlusal cant detail visibility
+    if (name === 'occCant')             updateOccCantVisibility();
 
     // TAD status
     if (id === 'fuf-has-tad')           toggleTadStatus('fuf');
@@ -3337,13 +2819,14 @@ function cycleTab(dir) {
     if (id === 'fua-current-aligner' || id === 'fua-total-aligners') updateAlignerProgress();
     if (id === 'fug-oj-now' || id === 'fug-ob-now' || id === 'fug-lfh-now') calcGmdChange();
   });
-  ['exam','plan','bond','fu-fixed','fu-aligner','fu-gmd','emergency','debond','tad','referred','retention'].forEach(loadForm);
+  ['exam','plan','bond','fu-fixed','fu-aligner','fu-gmd','emergency','debond','tad'].forEach(loadForm);
+  updateOccCantVisibility();
   updateApplianceCard();
   updateBondCard();
   updateProgress();
 
   // Default: all aseptic checkboxes checked (including tad)
-  ['aseptic-confirm','bond-aseptic','fuf-aseptic','fua-aseptic','fug-aseptic','em-aseptic','db-aseptic','tad-aseptic','ref-aseptic','ret-aseptic'].forEach(id=>{
+  ['aseptic-confirm','bond-aseptic','fuf-aseptic','fua-aseptic','fug-aseptic','em-aseptic','db-aseptic','tad-aseptic'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.checked=true;
   });
 
@@ -3449,23 +2932,4 @@ window.addEventListener('appinstalled', () => {
   const btn = document.getElementById('pwa-install-btn');
   if (btn) btn.remove();
   deferredInstallPrompt = null;
-});
-
-// ── Global error handler ──────────────────────────────────────────────
-// Catches unhandled JS errors and shows a user-friendly toast
-// instead of silently failing
-window.onerror = function(message, source, lineno, colno, error) {
-  console.warn('[EasyOrtho] Unhandled error:', message, 'at', source, lineno);
-  // Don't show toast for minor third-party / extension errors
-  if (source && !source.includes('app.js') && !source.includes('index.html')) return false;
-  showToast('⚠️ An unexpected error occurred. Your data is safe — try refreshing if issues persist.', 'error');
-  return false; // don't suppress browser's default console logging
-};
-
-window.addEventListener('unhandledrejection', e => {
-  console.warn('[EasyOrtho] Unhandled promise rejection:', e.reason);
-  // Only surface storage / critical errors to user
-  if (e.reason && (e.reason.name === 'QuotaExceededError' || String(e.reason).includes('storage'))) {
-    showToast('⚠️ Storage error — please export your data and free up space.', 'error');
-  }
 });
