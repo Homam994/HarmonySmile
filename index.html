@@ -102,8 +102,6 @@
 
 <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
 <div class="toast" id="toast"></div>
-<!-- Clinician autocomplete datalist — populated by applyAdminSchema() from admin settings -->
-<datalist id="clinician-list-datalist"></datalist>
 <div class="autosave-indicator" id="autosave-indicator">
   <div class="autosave-dot"></div>
   <span id="autosave-text">جاري الحفظ...</span>
@@ -319,6 +317,59 @@
           </div>
         </div>
       </div>
+
+      <div class="sub-title">Occlusal Plane / Canting</div>
+      <div style="background:var(--grey-50);border:1.5px solid var(--grey-200);border-radius:9px;padding:12px 14px;display:grid;gap:10px;">
+        <div class="grid-2">
+          <div class="field">
+            <label>Occlusal Cant</label>
+            <div class="toggle-group">
+              <label><input type="radio" name="occCant" value="None"><span>✅ None</span></label>
+              <label><input type="radio" name="occCant" value="Mild (&lt;2mm)"><span>Mild (&lt;2mm)</span></label>
+              <label><input type="radio" name="occCant" value="Moderate (2–4mm)"><span>Moderate (2–4mm)</span></label>
+              <label><input type="radio" name="occCant" value="Severe (&gt;4mm)"><span>Severe (&gt;4mm)</span></label>
+            </div>
+          </div>
+          <div class="field">
+            <label>Assessment Method</label>
+            <div class="toggle-group">
+              <label><input type="radio" name="occCantMethod" value="Clinical (tongue blade vs interpupillary line)"><span>Clinical (tongue blade)</span></label>
+              <label><input type="radio" name="occCantMethod" value="Photographic analysis"><span>Photographic</span></label>
+              <label><input type="radio" name="occCantMethod" value="Cephalometric"><span>Cephalometric</span></label>
+            </div>
+          </div>
+        </div>
+        <!-- Detail fields — hidden until a cant degree is selected -->
+        <div id="occ-cant-details" style="display:none;display:none;">
+          <div class="grid-3">
+            <div class="field">
+              <label>Cant Side</label>
+              <div class="toggle-group">
+                <label><input type="radio" name="occCantSide" value="Right side down"><span>Right side down</span></label>
+                <label><input type="radio" name="occCantSide" value="Left side down"><span>Left side down</span></label>
+              </div>
+            </div>
+            <div class="field">
+              <label>Cant Location</label>
+              <div class="toggle-group">
+                <label><input type="radio" name="occCantLocation" value="Anterior only"><span>Anterior only</span></label>
+                <label><input type="radio" name="occCantLocation" value="Posterior only"><span>Posterior only</span></label>
+                <label><input type="radio" name="occCantLocation" value="Full arch"><span>Full arch</span></label>
+              </div>
+            </div>
+            <div class="field">
+              <label>Suspected Origin</label>
+              <div class="toggle-group">
+                <label><input type="radio" name="occCantOrigin" value="Dento-alveolar"><span>Dento-alveolar</span></label>
+                <label><input type="radio" name="occCantOrigin" value="Skeletal — maxillary"><span>Skeletal — maxillary</span></label>
+                <label><input type="radio" name="occCantOrigin" value="Skeletal — mandibular"><span>Skeletal — mandibular</span></label>
+                <label><input type="radio" name="occCantOrigin" value="Combined dento-skeletal"><span>Combined</span></label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="sub-title">Dental Classification</div>
       <div class="grid-3">
         <div class="field">
@@ -698,7 +749,7 @@
   <div class="patient-bar">
     <div class="field"><label>Patient Name</label><input type="text" id="plan-name" placeholder="Full name"></div>
     <div class="field"><label>Age</label><input type="number" id="plan-age" placeholder="Years" min="1" max="120"></div>
-    <div class="field"><label>Clinician</label><input type="text" id="plan-clinician" placeholder="Dr. ..." list="clinician-list-datalist"></div>
+    <div class="field"><label>Clinician</label><input type="text" id="plan-clinician" placeholder="Dr. ..."></div>
     <div class="visit-date-box"><label>Plan Date</label><input type="date" id="plan-date"></div>
   </div>
 
@@ -1303,7 +1354,7 @@
   <div class="patient-bar">
     <div class="field"><label>Patient Name</label><input type="text" id="bond-name" placeholder="Full name"></div>
     <div class="field"><label>Visit #</label><input type="number" id="bond-visit-no" placeholder="1" min="1"></div>
-    <div class="field"><label>Clinician</label><input type="text" id="bond-clinician" placeholder="Dr. ..." list="clinician-list-datalist"></div>
+    <div class="field"><label>Clinician</label><input type="text" id="bond-clinician" placeholder="Dr. ..."></div>
     <div class="visit-date-box"><label>Date</label><input type="date" id="bond-date"></div>
   </div>
 
@@ -1578,7 +1629,7 @@
   <div class="patient-bar">
     <div class="field"><label>Patient Name</label><input type="text" id="fuf-name" placeholder="Full name"></div>
     <div class="field"><label>Visit #</label><input type="number" id="fuf-visit-no" placeholder="e.g. 3" min="1"></div>
-    <div class="field"><label>Clinician</label><input type="text" id="fuf-clinician" placeholder="Dr. ..." list="clinician-list-datalist"></div>
+    <div class="field"><label>Clinician</label><input type="text" id="fuf-clinician" placeholder="Dr. ..."></div>
     <div class="visit-date-box"><label>Date</label><input type="date" id="fuf-date"></div>
   </div>
 
@@ -1985,7 +2036,7 @@
   <div class="patient-bar">
     <div class="field"><label>Patient Name</label><input type="text" id="fua-name" placeholder="Full name"></div>
     <div class="field"><label>Visit #</label><input type="number" id="fua-visit-no" placeholder="e.g. 2" min="1"></div>
-    <div class="field"><label>Clinician</label><input type="text" id="fua-clinician" placeholder="Dr. ..." list="clinician-list-datalist"></div>
+    <div class="field"><label>Clinician</label><input type="text" id="fua-clinician" placeholder="Dr. ..."></div>
     <div class="visit-date-box"><label>Date</label><input type="date" id="fua-date"></div>
   </div>
 
@@ -2232,7 +2283,7 @@
   <div class="patient-bar">
     <div class="field"><label>Patient Name</label><input type="text" id="fug-name" placeholder="Full name"></div>
     <div class="field"><label>Visit #</label><input type="number" id="fug-visit-no" placeholder="e.g. 2" min="1"></div>
-    <div class="field"><label>Clinician</label><input type="text" id="fug-clinician" placeholder="Dr. ..." list="clinician-list-datalist"></div>
+    <div class="field"><label>Clinician</label><input type="text" id="fug-clinician" placeholder="Dr. ..."></div>
     <div class="visit-date-box"><label>Date</label><input type="date" id="fug-date"></div>
   </div>
 
@@ -2502,7 +2553,7 @@
   <div class="patient-bar">
     <div class="field"><label>Patient Name</label><input type="text" id="em-name" placeholder="Full name"></div>
     <div class="field"><label>Pain Level (0–10)</label><input type="number" id="em-pain" placeholder="0" min="0" max="10"></div>
-    <div class="field"><label>Clinician</label><input type="text" id="em-clinician" placeholder="Dr. ..." list="clinician-list-datalist"></div>
+    <div class="field"><label>Clinician</label><input type="text" id="em-clinician" placeholder="Dr. ..."></div>
     <div class="visit-date-box"><label>Date</label><input type="date" id="em-date"></div>
   </div>
 
@@ -2643,7 +2694,7 @@
   <div class="patient-bar">
     <div class="field"><label>Patient Name</label><input type="text" id="db-name" placeholder="Full name"></div>
     <div class="field"><label>Total Treatment Duration</label><input type="text" id="db-duration" placeholder="e.g. 22 months"></div>
-    <div class="field"><label>Clinician</label><input type="text" id="db-clinician" placeholder="Dr. ..." list="clinician-list-datalist"></div>
+    <div class="field"><label>Clinician</label><input type="text" id="db-clinician" placeholder="Dr. ..."></div>
     <div class="visit-date-box"><label>Date</label><input type="date" id="db-date"></div>
   </div>
 
@@ -2810,7 +2861,7 @@
   <div class="patient-bar">
     <div class="field"><label>Patient Name</label><input type="text" id="tad-name" placeholder="Full name"></div>
     <div class="field"><label>Visit #</label><input type="number" id="tad-visit-no" placeholder="e.g. 1" min="1"></div>
-    <div class="field"><label>Clinician</label><input type="text" id="tad-clinician" placeholder="Dr. ..." list="clinician-list-datalist"></div>
+    <div class="field"><label>Clinician</label><input type="text" id="tad-clinician" placeholder="Dr. ..."></div>
     <div class="visit-date-box"><label>Date</label><input type="date" id="tad-date"></div>
   </div>
 
@@ -2853,7 +2904,7 @@
   <div class="patient-bar">
     <div class="field"><label>Patient Name</label><input type="text" id="ref-name" placeholder="Full name"></div>
     <div class="field"><label>Age</label><input type="number" id="ref-age" placeholder="Years" min="1" max="120"></div>
-    <div class="field"><label>Clinician</label><input type="text" id="ref-clinician" placeholder="Dr. ..." list="clinician-list-datalist"></div>
+    <div class="field"><label>Clinician</label><input type="text" id="ref-clinician" placeholder="Dr. ..."></div>
     <div class="visit-date-box"><label>Assessment Date</label><input type="date" id="ref-date"></div>
   </div>
 
@@ -2876,7 +2927,7 @@
     </div>
     <div class="section-body">
       <div class="grid-2">
-        <div class="field"><label>Referring Clinician</label><input type="text" id="ref-referring-clinician" placeholder="Dr. ..." list="clinician-list-datalist"></div>
+        <div class="field"><label>Referring Clinician</label><input type="text" id="ref-referring-clinician" placeholder="Dr. ..."></div>
         <div class="field"><label>Referring Practice / Clinic</label><input type="text" id="ref-referring-practice" placeholder="Practice name & city"></div>
       </div>
       <div class="sub-title">Reason for Referral</div>
@@ -3332,7 +3383,7 @@
   <div class="patient-bar">
     <div class="field"><label>Patient Name</label><input type="text" id="ret-name" placeholder="Full name"></div>
     <div class="field"><label>Retention Visit #</label><input type="number" id="ret-visit-no" placeholder="e.g. 1" min="1"></div>
-    <div class="field"><label>Clinician</label><input type="text" id="ret-clinician" placeholder="Dr. ..." list="clinician-list-datalist"></div>
+    <div class="field"><label>Clinician</label><input type="text" id="ret-clinician" placeholder="Dr. ..."></div>
     <div class="visit-date-box"><label>Date</label><input type="date" id="ret-date"></div>
   </div>
 

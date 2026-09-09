@@ -136,9 +136,6 @@ document.addEventListener('change', updateProgress);
 const WIRE_SIZES = ['0.012','0.014','0.016','0.018','0.020','0.016×0.016','0.016×0.022','0.017×0.025','0.018×0.025','0.019×0.025','0.021×0.025'];
 const WIRE_MATS  = ['NiTi','SS','RCS NiTi','TMA'];
 
-// ── Shared clinical text constants ─────────────────────────────────────
-const ASEPTIC_TEXT = 'Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.';
-
 // Wire state: { containerId: { upper: {size, mat}, lower: {size, mat} } }
 const wireState = {};
 
@@ -225,6 +222,14 @@ function getWireText(containerId, arch) {
 // ══════════════════════════════════════════════════════════════
 
 // updateGmdCategory: إظهار/إخفاء قوائم الأجهزة بحسب الفئة المختارة
+// ── Occlusal Cant visibility ───────────────────────────────────────────
+function updateOccCantVisibility() {
+  const val = document.querySelector('[name="occCant"]:checked')?.value || '';
+  const details = document.getElementById('occ-cant-details');
+  if (!details) return;
+  details.style.display = (val && val !== 'None') ? '' : 'none';
+}
+
 function updateGmdCategory() {
   const val = document.querySelector('[name="gmd-category"]:checked')?.value || '';
   const isRemovable = val === 'functional-removable';
@@ -516,7 +521,7 @@ function applyNotationToCharts() {
 
 function setNotation(system) {
   NOTATION = system;
-  safeStore('ortho_notation', system);
+  localStorage.setItem('ortho_notation', system);
   applyNotationToCharts();
 }
 
@@ -642,6 +647,19 @@ function collectFormData(tab) {
       R('Lip position — Lower', radio('lipLower'));
       R('Nasolabial angle',   radio('nasoAngle'));
 
+      // Occlusal Cant — only include detail fields if cant is present
+      const occCantVal = radio('occCant');
+      if (occCantVal) {
+        S('Occlusal Plane / Canting');
+        R('Occlusal cant',      occCantVal);
+        R('Assessment method',  radio('occCantMethod'));
+        if (occCantVal !== 'None') {
+          R('Cant side',        radio('occCantSide'));
+          R('Cant location',    radio('occCantLocation'));
+          R('Suspected origin', radio('occCantOrigin'));
+        }
+      }
+
       S('Dental Classification');
       R('Incisors', radio('incisorClass'));
       const br=radio('buccalRight'), bl=radio('buccalLeft');
@@ -726,7 +744,7 @@ function collectFormData(tab) {
       if(recs.length||isChk('aseptic-confirm')){
         S('Records & Aseptic');
         if(recs.length) R('Records taken', recs.join(', '));
-        if(isChk('aseptic-confirm')) RA(ASEPTIC_TEXT);
+        if(isChk('aseptic-confirm')) RA('Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.');
       }
 
       S('Assessment & Plan');
@@ -865,7 +883,7 @@ function collectFormData(tab) {
       if(inst.length) R('Instructions given', inst.join(', '));
       R('Next visit',  get('bond-nv'));
       R('Referral',    get('bond-referral'));
-      if(isChk('bond-aseptic')) RA(ASEPTIC_TEXT);
+      if(isChk('bond-aseptic')) RA('Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.');
       R('Notes',       get('bond-notes'));
       break;
     }
@@ -949,7 +967,7 @@ function collectFormData(tab) {
       S('Visit Completion');
       R('Next visit', get('fuf-nv'));
       R('Referral',   get('fuf-referral'));
-      if(isChk('fuf-aseptic')) RA(ASEPTIC_TEXT);
+      if(isChk('fuf-aseptic')) RA('Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.');
       R('Notes',      get('fuf-notes'));
       break;
     }
@@ -1004,7 +1022,7 @@ function collectFormData(tab) {
       }
       R('Next visit', get('fua-nv'));
       R('Referral',   get('fua-referral'));
-      if(isChk('fua-aseptic')) RA(ASEPTIC_TEXT);
+      if(isChk('fua-aseptic')) RA('Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.');
       R('Notes',      get('fua-notes'));
       break;
     }
@@ -1068,7 +1086,7 @@ function collectFormData(tab) {
       if(ret.length) R('Interim retention', ret.join(', '));
       R('Next visit', get('fug-nv'));
       R('Referral',   get('fug-referral'));
-      if(isChk('fug-aseptic')) RA(ASEPTIC_TEXT);
+      if(isChk('fug-aseptic')) RA('Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.');
       R('Notes',      get('fug-notes'));
       break;
     }
@@ -1117,7 +1135,7 @@ function collectFormData(tab) {
       if(isChk('em-inst-callback'))  inst2.push('Call if worsens');
       if(inst2.length) R('Instructions given', inst2.join(', '));
       R('Follow-up plan', radio('em-return'));
-      if(isChk('em-aseptic')) RA(ASEPTIC_TEXT);
+      if(isChk('em-aseptic')) RA('Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.');
       R('Notes',    get('em-notes'));
       R('Referral', get('em-referral'));
       break;
@@ -1176,7 +1194,7 @@ function collectFormData(tab) {
       if(di.length) R('Instructions given', di.join(', '));
       R('Next visit', get('db-nv'));
       R('Referral',   get('db-referral'));
-      if(isChk('db-aseptic')) RA(ASEPTIC_TEXT);
+      if(isChk('db-aseptic')) RA('Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.');
       R('Treatment summary', get('db-notes'));
       break;
     }
@@ -1296,7 +1314,7 @@ function collectFormData(tab) {
       R('Patient / parent concerns', get('ref-patient-concerns'));
       R('Plan moving forward',        get('ref-plan-forward'));
       R('Next visit purpose',         get('ref-next-visit'));
-      if(isChk('ref-aseptic')) RA(ASEPTIC_TEXT);
+      if(isChk('ref-aseptic')) RA('Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.');
       R('Additional notes', get('ref-notes'));
       break;
     }
@@ -1409,7 +1427,7 @@ function collectFormData(tab) {
       S('Visit Completion');
       R('Oral hygiene', radio('ret-oh'));
       R('Patient concerns', get('ret-patient-concerns'));
-      if(isChk('ret-aseptic')) RA(ASEPTIC_TEXT);
+      if(isChk('ret-aseptic')) RA('Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.');
       R('Notes', get('ret-notes'));
       break;
     }
@@ -1463,7 +1481,7 @@ function collectFormData(tab) {
       S('Session Follow-Up');
       R('Next visit', get('tad-nv'));
       R('Referral',   get('tad-referral'));
-      if(isChk('tad-aseptic')) RA(ASEPTIC_TEXT);
+      if(isChk('tad-aseptic')) RA('Aseptic technique and appropriate PPE were maintained and observed throughout the entire procedure. Confirmed by Clinician.');
       R('Notes',      get('tad-notes'));
       break;
     }
@@ -1500,20 +1518,6 @@ function getCurrentSummary() {
 
 
 // ── Toast ──────────────────────────────────────────────────────────────
-// ── Safe localStorage wrapper ─────────────────────────────────────────
-// Handles QuotaExceededError (Private Mode / full storage) gracefully
-function safeStore(key, value) {
-  try {
-    localStorage.setItem(key, value);
-    return true;
-  } catch(e) {
-    // QuotaExceededError or SecurityError (Private Mode in some browsers)
-    console.warn('[EasyOrtho] localStorage write failed:', key, e.name);
-    showToast('⚠️ Storage full — draft not saved. Free up space or use Export.', 'error');
-    return false;
-  }
-}
-
 function showToast(msg, type='success') {
   const t = document.getElementById('toast');
   t.textContent=msg; t.className='toast '+type;
@@ -1622,10 +1626,11 @@ function printSummary() {
   const html = buildPrintHTML();
   if (!html) { showToast('⚠️ Nothing to print yet','error'); return; }
 
-  // ── فتح نافذة طباعة منفصلة ────────────────────────────────────────
+  // ── فتح نافذة طباعة منفصلة مع styles مضمنة ─────────────────────────
+  // هذا يضمن أن الـ CSS يعمل بغض النظر عن كيفية تحميل الملفات
   const printWin = window.open('', '_blank', 'width=900,height=700');
   if (!printWin) {
-    // fallback: overlay في نفس الصفحة إذا منع المتصفح النوافذ المنبثقة
+    // fallback: استخدام الـ overlay إذا منع المتصفح النافذة الجديدة
     const overlay = document.getElementById('print-overlay');
     const doc     = document.getElementById('print-doc-content');
     doc.innerHTML = html;
@@ -1640,66 +1645,56 @@ function printSummary() {
     return;
   }
 
-  // ── دالة كتابة نافذة الطباعة ──────────────────────────────────────
-  function writePrintWindow(css) {
-    const styleBlock = css
-      ? `<style>${css}\nbody>*{display:block!important}#print-overlay{display:block!important;position:static!important}body{background:white!important}</style>`
-      : `<link rel="stylesheet" href="./app.css">`;
-    printWin.document.write(`<!DOCTYPE html>
+  // جلب الـ CSS الخارجي وتضمينه في نافذة الطباعة
+  fetch('./app.css')
+    .then(r => r.text())
+    .then(css => {
+      printWin.document.write(`<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>EasyOrtho — Clinical Summary</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-${styleBlock}
+<style>
+${css}
+/* ── Override للطباعة: إظهار كل شيء ── */
+body > * { display: block !important; }
+#print-overlay { display: block !important; position: static !important; }
+body { background: white !important; }
+</style>
 </head>
 <body>
 <div id="print-overlay" style="display:block;position:static;">
-  <div class="print-doc">${html}</div>
+  <div class="print-doc">
+    ${html}
+  </div>
 </div>
 </body>
 </html>`);
-    printWin.document.close();
-    // انتظر تحميل الـ fonts ثم اطبع
-    printWin.onload = () => {
-      setTimeout(() => { printWin.focus(); printWin.print(); setTimeout(() => printWin.close(), 1000); }, 600);
-    };
-    // fallback timeout إذا لم يُطلق onload
-    setTimeout(() => {
-      if (!printWin.closed) {
-        printWin.focus(); printWin.print();
-        setTimeout(() => printWin.close(), 1000);
-      }
-    }, 1800);
-  }
-
-  // ── Cache-first CSS strategy (يعمل offline) ────────────────────────
-  // 1. حاول من SW Cache أولاً (فوري + يعمل offline)
-  // 2. fallback لـ fetch (online فقط)
-  // 3. fallback نهائي: اطبع بدون CSS inline
-  const cssUrl = './app.css';
-
-  if ('caches' in window) {
-    caches.match(cssUrl)
-      .then(cachedResponse => {
-        if (cachedResponse) {
-          return cachedResponse.text();
+      printWin.document.close();
+      // انتظر تحميل الـ fonts ثم اطبع
+      printWin.onload = () => {
+        setTimeout(() => {
+          printWin.focus();
+          printWin.print();
+          setTimeout(() => printWin.close(), 1000);
+        }, 600);
+      };
+      // fallback إذا لم يُطلق onload
+      setTimeout(() => {
+        if (!printWin.closed) {
+          printWin.focus();
+          printWin.print();
+          setTimeout(() => printWin.close(), 1000);
         }
-        // ليس في الـ cache — حاول الشبكة
-        return fetch(cssUrl, { cache: 'force-cache' }).then(r => r.text());
-      })
-      .then(css => writePrintWindow(css))
-      .catch(() => {
-        // فشل كل شيء — اطبع مع رابط CSS الخارجي (يعمل إذا كان الملف متاحاً)
-        writePrintWindow(null);
-      });
-  } else {
-    // متصفح لا يدعم Cache API — استخدم fetch مباشرة
-    fetch(cssUrl)
-      .then(r => r.text())
-      .then(css => writePrintWindow(css))
-      .catch(() => writePrintWindow(null));
-  }
+      }, 1500);
+    })
+    .catch(() => {
+      // إذا فشل جلب CSS، اطبع بدونه
+      printWin.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>EasyOrtho</title></head><body>${html}</body></html>`);
+      printWin.document.close();
+      setTimeout(() => { printWin.print(); setTimeout(() => printWin.close(), 500); }, 400);
+    });
 }
 
 // ── Save / Load / Clear ────────────────────────────────────────────────
@@ -1738,13 +1733,7 @@ function saveCurrentForm() {
     data['_ret_chart_lower']=[...retChartSets.lower];
   }
   if(currentTab==='exam') data['__teeth']={...toothState};
-  // TAD screws — collect active screw first then save full array
-  if(currentTab==='tad'){
-    if(tadActiveScrewIdx >= 0) tadCollectScrew(tadActiveScrewIdx);
-    data['_tad_screws']        = tadScrews;
-    data['_tad_active_idx']    = tadActiveScrewIdx;
-  }
-  safeStore('ortho_v4_'+currentTab, JSON.stringify(data));
+  localStorage.setItem('ortho_v4_'+currentTab, JSON.stringify(data));
   showToast('💾 Draft saved!','success');
 }
 
@@ -1780,21 +1769,6 @@ function loadForm(tab) {
       }
       return;
     }
-    if(key==='_tad_screws'){
-      if(Array.isArray(data[key]) && data[key].length){
-        tadScrews = data[key];
-        tadActiveScrewIdx = data['_tad_active_idx'] ?? 0;
-        // Rebuild UI after DOM is ready
-        setTimeout(() => {
-          tadRenderTabs();
-          if(tadActiveScrewIdx >= 0 && tadScrews[tadActiveScrewIdx]){
-            tadRenderScrewCard(tadActiveScrewIdx);
-          }
-        }, 50);
-      }
-      return;
-    }
-    if(key==='_tad_active_idx') return; // handled above with _tad_screws
     if(key==='_ret_chart_upper'){
       retChartSets.upper.clear();
       (data[key]||[]).forEach(n => retChartSets.upper.add(n));
@@ -1912,6 +1886,8 @@ function loadForm(tab) {
   });
   updateProgress();
   updateBondSummary();
+  // استعادة حالة occ cant details بعد تحميل المسودة
+  if(tab==='exam') updateOccCantVisibility();
 }
 
 function clearCurrentForm() {
@@ -2107,6 +2083,12 @@ function clearCurrentForm() {
     const el=document.getElementById(id);
     if(el) el.checked=true;
   });
+
+  // إعادة إخفاء occ cant details عند مسح الـ exam form
+  if(currentTab==='exam'){
+    const cd=document.getElementById('occ-cant-details');
+    if(cd) cd.style.display='none';
+  }
 
   // ── Step 4b: إعادة تهيئة referred tab ──
   if(currentTab==='referred'){
@@ -2544,18 +2526,6 @@ function fuTadSummaryLines(prefix) {
 
 
 // ── Admin schema integration ───────────────────────────────────────────
-// ── Clinician Autocomplete — populate datalist from admin schema ───────
-function updateClinicianDatalist(clinicians) {
-  const dl = document.getElementById('clinician-list-datalist');
-  if (!dl) return;
-  dl.innerHTML = '';
-  (clinicians || []).filter(Boolean).forEach(name => {
-    const opt = document.createElement('option');
-    opt.value = name;
-    dl.appendChild(opt);
-  });
-}
-
 function applyAdminSchema() {
   const saved = localStorage.getItem('ortho_admin_schema');
   if (!saved) return;
@@ -2565,9 +2535,6 @@ function applyAdminSchema() {
     // Apply wire sizes & materials
     if (schema.wireSizes) WIRE_SIZES.length = 0, schema.wireSizes.forEach(s => WIRE_SIZES.push(s));
     if (schema.wireMats)  WIRE_MATS.length  = 0, schema.wireMats.forEach(m => WIRE_MATS.push(m));
-
-    // Update clinician autocomplete datalist
-    if (schema.clinicians) updateClinicianDatalist(schema.clinicians);
 
     // Rebuild wire selectors with new options
     // ref-wire-selector is rebuilt lazily — only if it already has children (tab was visited)
@@ -3176,14 +3143,9 @@ function autoSaveTab(tab) {
     data['_ret_chart_upper'] = [...retChartSets.upper];
     data['_ret_chart_lower'] = [...retChartSets.lower];
   }
-  if (tab === 'tad') {
-    if (tadActiveScrewIdx >= 0) tadCollectScrew(tadActiveScrewIdx);
-    data['_tad_screws']     = tadScrews;
-    data['_tad_active_idx'] = tadActiveScrewIdx;
-  }
 
-  safeStore('ortho_v4_' + tab, JSON.stringify(data));
-  safeStore('ortho_v4_autosave_time', Date.now().toString());
+  localStorage.setItem('ortho_v4_' + tab, JSON.stringify(data));
+  localStorage.setItem('ortho_v4_autosave_time', Date.now().toString());
   markSaved(tab);
 }
 
@@ -3281,6 +3243,9 @@ function cycleTab(dir) {
   document.addEventListener('change', e => {
     const name = e.target.name;
     const id   = e.target.id;
+
+    // Occlusal cant visibility
+    if (name === 'occCant') updateOccCantVisibility();
 
     // Referred patient decision & extraction chart
     if (name === 'ref-decision')  updateRefDecision();
@@ -3449,23 +3414,4 @@ window.addEventListener('appinstalled', () => {
   const btn = document.getElementById('pwa-install-btn');
   if (btn) btn.remove();
   deferredInstallPrompt = null;
-});
-
-// ── Global error handler ──────────────────────────────────────────────
-// Catches unhandled JS errors and shows a user-friendly toast
-// instead of silently failing
-window.onerror = function(message, source, lineno, colno, error) {
-  console.warn('[EasyOrtho] Unhandled error:', message, 'at', source, lineno);
-  // Don't show toast for minor third-party / extension errors
-  if (source && !source.includes('app.js') && !source.includes('index.html')) return false;
-  showToast('⚠️ An unexpected error occurred. Your data is safe — try refreshing if issues persist.', 'error');
-  return false; // don't suppress browser's default console logging
-};
-
-window.addEventListener('unhandledrejection', e => {
-  console.warn('[EasyOrtho] Unhandled promise rejection:', e.reason);
-  // Only surface storage / critical errors to user
-  if (e.reason && (e.reason.name === 'QuotaExceededError' || String(e.reason).includes('storage'))) {
-    showToast('⚠️ Storage error — please export your data and free up space.', 'error');
-  }
 });

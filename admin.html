@@ -423,11 +423,6 @@
     <button class="mobile-nav-tab" id="mnav-form-fu-gmd"     onclick="showPanel('form-fu-gmd')">🌱 GMD F/U</button>
     <button class="mobile-nav-tab" id="mnav-form-emergency"  onclick="showPanel('form-emergency')">🚨 Emergency</button>
     <button class="mobile-nav-tab" id="mnav-form-debond"     onclick="showPanel('form-debond')">✂️ Debond</button>
-    <button class="mobile-nav-tab" id="mnav-form-tad"        onclick="showPanel('form-tad')">🔩 TAD</button>
-    <div class="mobile-nav-divider"></div>
-    <span class="mobile-nav-group-label">Special</span>
-    <button class="mobile-nav-tab" id="mnav-form-referred"   onclick="showPanel('form-referred')">🔄 Referred</button>
-    <button class="mobile-nav-tab" id="mnav-form-retention"  onclick="showPanel('form-retention')">🔵 Retention</button>
     <div class="mobile-nav-divider"></div>
     <button class="mobile-nav-tab" id="mnav-reset" onclick="showPanel('reset')">🔄 Reset</button>
   </div>
@@ -489,21 +484,6 @@
       <div class="sidebar-item" onclick="showPanel('form-debond')" id="nav-form-debond">
         <span class="sidebar-icon">✂️</span> Debond &amp; Retainer
         <span class="sidebar-count" id="cnt-debond">0</span>
-      </div>
-      <div class="sidebar-item" onclick="showPanel('form-tad')" id="nav-form-tad">
-        <span class="sidebar-icon">🔩</span> TAD / Mini-screw
-        <span class="sidebar-count" id="cnt-tad">0</span>
-      </div>
-    </div>
-    <div class="sidebar-group">
-      <div class="sidebar-group-label">Form Fields — Special</div>
-      <div class="sidebar-item" onclick="showPanel('form-referred')" id="nav-form-referred">
-        <span class="sidebar-icon">🔄</span> Referred Patient
-        <span class="sidebar-count" id="cnt-referred">0</span>
-      </div>
-      <div class="sidebar-item" onclick="showPanel('form-retention')" id="nav-form-retention">
-        <span class="sidebar-icon">🔵</span> Retention F/U
-        <span class="sidebar-count" id="cnt-retention">0</span>
       </div>
     </div>
     <div class="sidebar-group">
@@ -727,9 +707,6 @@
       <div class="panel" id="panel-form-fu-gmd"><div id="fields-fu-gmd"></div></div>
       <div class="panel" id="panel-form-emergency"><div id="fields-emergency"></div></div>
       <div class="panel" id="panel-form-debond"><div id="fields-debond"></div></div>
-      <div class="panel" id="panel-form-tad"><div id="fields-tad"></div></div>
-      <div class="panel" id="panel-form-referred"><div id="fields-referred"></div></div>
-      <div class="panel" id="panel-form-retention"><div id="fields-retention"></div></div>
 
       <!-- ════════════════════════
            PANEL: RESET
@@ -866,6 +843,11 @@ const DEFAULT_SCHEMA = {
       { id:'motivation',    label:'Motivation Level',          type:'radio',  options:['High','Moderate','Low','Parental'] },
       { id:'prevOrtho',     label:'Previous Ortho Treatment',  type:'select', options:['None','Fixed braces','Functional appliance','Retainer only','Clear aligners','Orthognathic surgery'] },
       { id:'cc',            label:'Chief Complaints',          type:'check',  options:['Crowding','Spacing','Protrusion','Deep bite','Open bite','Crossbite','Smile aesthetics','Facial profile','Functional issue','Missing teeth','TMJ / Pain','Referral'] },
+      { id:'occCant',       label:'Occlusal Cant',             type:'radio',  options:['None','Mild (<2mm)','Moderate (2–4mm)','Severe (>4mm)'] },
+      { id:'occCantSide',   label:'Cant Side',                 type:'radio',  options:['Right side down','Left side down'] },
+      { id:'occCantLocation',label:'Cant Location',            type:'radio',  options:['Anterior only','Posterior only','Full arch'] },
+      { id:'occCantOrigin', label:'Suspected Origin',          type:'radio',  options:['Dento-alveolar','Skeletal — maxillary','Skeletal — mandibular','Combined dento-skeletal'] },
+      { id:'occCantMethod', label:'Assessment Method',         type:'radio',  options:['Clinical (tongue blade vs interpupillary line)','Photographic analysis','Cephalometric'] },
     ],
     plan: [
       { id:'plan-tx-type',        label:'Treatment Type',         type:'select', options:['Non-extraction camouflage','Extraction treatment','Non-extraction expansion','Surgical-orthodontic','Limited / Interceptive','Phase I (Growth modification)','Phase II (Comprehensive)'] },
@@ -941,70 +923,31 @@ const DEFAULT_SCHEMA = {
       { id:'db-outcome',         label:'Treatment Objectives',    type:'radio',  options:['Fully achieved','Mostly achieved','Partially achieved — compromise'] },
       { id:'db-oh',              label:'Oral Hygiene',            type:'radio',  options:['Good','Fair','Poor'] },
     ],
-    tad: [
-      { id:'tad-jaw',            label:'Jaw',                     type:'radio',  options:['Maxilla','Mandible'] },
-      { id:'tad-stability',      label:'Primary Stability',       type:'radio',  options:['Stable — no mobility','Slightly mobile — monitor','Mobile — repositioned','Mobile — removed'] },
-      { id:'tad-torque',         label:'Insertion Torque',        type:'radio',  options:['Low torque — smooth insertion','Moderate torque — slight resistance','High torque — significant resistance'] },
-      { id:'tad-xray',           label:'Post-insertion X-ray',    type:'radio',  options:['Taken — clear of root structures','Taken — proximity to root noted, acceptable','Taken — repositioned due to root proximity','Not taken at this visit'] },
-      { id:'tad-loading',        label:'Loading Timing',          type:'radio',  options:['Immediate loading — same visit','Delayed loading — 2 weeks','Delayed loading — 4 weeks','Not loaded yet — passive only'] },
-    ],
-    referred: [
-      { id:'ref-rec-quality',        label:'Records Quality',            type:'radio',  options:['Complete and adequate','Partial — acceptable','Partial — new records required','Absent — full records required'] },
-      { id:'ref-prev-appliance',     label:'Previous Appliance',         type:'radio',  options:['Fixed braces','Clear aligners','Functional appliance','Combination of appliances','Unknown'] },
-      { id:'ref-prev-rx',            label:'Previous Prescription',      type:'radio',  options:['MBT','Roth','SWA','Damon','Unknown'] },
-      { id:'ref-prev-stage',         label:'Stage at Transfer',          type:'radio',  options:['Early alignment / leveling','Mid-treatment — space closure','Mid-treatment — OJ/OB correction','Late finishing stage','Near completion (< 3 months estimated)','Unknown'] },
-      { id:'ref-prev-compliance',    label:'Previous Compliance',        type:'radio',  options:['Excellent','Good','Fair','Poor','Not documented'] },
-      { id:'ref-appliance-cond',     label:'Appliance Condition',        type:'radio',  options:['Good condition — serviceable','Acceptable — minor issues noted','Poor condition — needs significant repair','Appliance removed before transfer'] },
-      { id:'ref-bracket-cond',       label:'Bracket Integrity',          type:'radio',  options:['All brackets intact','Minor debonds noted','Significant bracket loss — rebonding session required','Bracket repositioning needed','N/A — aligner case'] },
-      { id:'ref-complexity',         label:'Complexity at Transfer',     type:'radio',  options:['Straightforward — continue as planned','Moderate — plan modification required','Complex — significant replanning needed','Extremely complex — multidisciplinary input required'] },
-      { id:'ref-decision',           label:'Treatment Decision',         type:'radio',  options:['Continue treatment — original plan appropriate','Continue with modifications','Restart from a more suitable stage','Debond and reassess — poor prognosis','Refer to specialist before proceeding','Refer for orthognathic surgical consultation'] },
-      { id:'ref-consent',            label:'Consent Status',             type:'radio',  options:['New treatment plan discussed — written consent signed','Verbal consent obtained — written consent to follow','Existing consent reviewed and acceptable','Consent to be obtained at next visit'] },
-    ],
-    retention: [
-      { id:'ret-phase',              label:'Retention Phase',            type:'radio',  options:['Phase 1 — Active retention (0–6 months)','Phase 2 — Passive retention (6 months–2 years)','Phase 3 — Long-term review (2+ years)','Post-surgical retention','Growth completion retention'] },
-      { id:'ret-fr-upper-integrity', label:'Upper Fixed Retainer',       type:'radio',  options:['Intact — all bonding points secure','Partial debond','Complete debond — retainer detached','Wire fracture','Wire distortion noted','No upper fixed retainer'] },
-      { id:'ret-fr-lower-integrity', label:'Lower Fixed Retainer',       type:'radio',  options:['Intact — all bonding points secure','Partial debond','Complete debond — retainer detached','Wire fracture','Wire distortion noted','No lower fixed retainer'] },
-      { id:'ret-fr-upper-plaque',    label:'Upper — Plaque/Calculus',    type:'radio',  options:['None','Mild — OH reinforced','Moderate — scaling required','Severe — perio referral'] },
-      { id:'ret-fr-lower-plaque',    label:'Lower — Plaque/Calculus',    type:'radio',  options:['None','Mild — OH reinforced','Moderate — scaling required','Severe — perio referral'] },
-      { id:'ret-removable-fit',      label:'Removable Retainer Fit',     type:'radio',  options:['Fits well — full seating','Minor discrepancy — acceptable','Poor fit — significant gaps','Does not seat — remake required','Lost or broken — replacement needed','No removable retainer in protocol'] },
-      { id:'ret-wear-compliance',    label:'Wear Compliance',            type:'radio',  options:['Full-time as instructed (22 hrs/day)','Nights only — as instructed','Wearing but inconsistently','Rarely wearing (<3 nights/week)','Not wearing at all'] },
-      { id:'ret-compliance-evidence',label:'Compliance Evidence',        type:'radio',  options:['Consistent with reported — retainer fits well','Inconsistent — retainer tight on seating','Inconsistent — visible relapse noted','Cannot assess'] },
-      { id:'ret-align-upper',        label:'Upper Arch Stability',       type:'radio',  options:['Stable — no change','Mild change — physiologic, acceptable','Moderate change — monitor closely','Significant relapse — intervention warranted'] },
-      { id:'ret-align-lower',        label:'Lower Arch Stability',       type:'radio',  options:['Stable — no change','Mild change — physiologic, acceptable','Moderate change — monitor closely','Significant relapse — intervention warranted'] },
-      { id:'ret-relapse',            label:'Overall Relapse Severity',   type:'radio',  options:['No relapse — stable result','Physiologic / minor — acceptable','Mild relapse — monitor closely','Moderate relapse — active intervention needed','Significant relapse — re-treatment discussion'] },
-      { id:'ret-wsl',                label:'WSL Status',                 type:'radio',  options:['None','Improving — remineralisation evident','Static — stable, no change','Worsening — restorative referral'] },
-      { id:'ret-decision',           label:'Clinical Decision',          type:'radio',  options:['Continue current retention protocol — stable','Continue — minor protocol modification','Increase removable retainer wear time','Reinforce or replace fixed retainer','Fabricate new removable retainer','Active intervention — limited fixed correction','Refer for re-treatment assessment','Discharge — retention complete','Discharge — patient declines further review'] },
-      { id:'ret-next-interval',      label:'Next Visit Interval',        type:'radio',  options:['1 month','3 months','6 months','1 year','Discharge — no further routine review','PRN — as needed'] },
-      { id:'ret-oh',                 label:'Oral Hygiene',               type:'radio',  options:['Good','Fair','Poor — OH instructions given'] },
-    ],
   }
 };
 
 // ══════════════════════════════════════════════════════════════
 // FORM KEYS — matches all forms in index.html
 // ══════════════════════════════════════════════════════════════
-const FORM_KEYS = ['exam','plan','bond','fu-fixed','fu-aligner','fu-gmd','emergency','debond','tad','referred','retention'];
+const FORM_KEYS = ['exam','plan','bond','fu-fixed','fu-aligner','fu-gmd','emergency','debond'];
 
 // ══════════════════════════════════════════════════════════════
 // PANEL METADATA
 // ══════════════════════════════════════════════════════════════
 const PANEL_META = {
-  'clinic':              { title:'Clinic Settings',              desc:'General information displayed across all forms' },
-  'clinicians':          { title:'Clinicians',                   desc:'Names used as autocomplete suggestions in the Clinician field' },
-  'notation':            { title:'Tooth Notation System',        desc:'Control how tooth numbers are displayed in charts, summaries, and printed reports' },
-  'wires':               { title:'Wire Options',                 desc:'Archwire sizes and materials shown in wire chip selectors' },
-  'form-exam':           { title:'Examination Form',             desc:'Edit radio groups, dropdowns and checkbox lists in the Examination tab' },
-  'form-plan':           { title:'Treatment Plan Form',          desc:'Edit option lists for the Treatment Plan tab' },
-  'form-bond':           { title:'Bond-Up Form',                 desc:'Edit options for the bonding session tab' },
-  'form-fu-fixed':       { title:'Fixed Follow-Up Form',         desc:'Edit options for fixed appliance review visits' },
-  'form-fu-aligner':     { title:'Aligner Follow-Up Form',       desc:'Edit options for clear aligner review visits' },
-  'form-fu-gmd':         { title:'GMD Follow-Up Form',           desc:'Edit options for growth modification device review visits' },
-  'form-emergency':      { title:'Emergency Visit Form',         desc:'Edit emergency type pills and treatment options' },
-  'form-debond':         { title:'Debond & Retainer Form',       desc:'Edit options for debonding and retention visits' },
-  'form-tad':            { title:'TAD / Mini-screw Form',        desc:'Edit options for TAD insertion visit fields' },
-  'form-referred':       { title:'Referred Patient Form',        desc:'Edit options for transfer patient assessment fields' },
-  'form-retention':      { title:'Retention Follow-Up Form',     desc:'Edit options for retention review visit fields' },
-  'reset':               { title:'Reset & Export',               desc:'Export, import, or restore factory settings' },
+  'clinic':          { title:'Clinic Settings',           desc:'General information displayed across all forms' },
+  'clinicians':      { title:'Clinicians',                desc:'Names used as autocomplete suggestions in the Clinician field' },
+  'notation':        { title:'Tooth Notation System',     desc:'Control how tooth numbers are displayed in charts, summaries, and printed reports' },
+  'wires':           { title:'Wire Options',              desc:'Archwire sizes and materials shown in wire chip selectors' },
+  'form-exam':       { title:'Examination Form',          desc:'Edit radio groups, dropdowns and checkbox lists in the Examination tab' },
+  'form-plan':       { title:'Treatment Plan Form',       desc:'Edit option lists for the Treatment Plan tab' },
+  'form-bond':       { title:'Bond-Up Form',              desc:'Edit options for the bonding session tab' },
+  'form-fu-fixed':   { title:'Fixed Follow-Up Form',      desc:'Edit options for fixed appliance review visits' },
+  'form-fu-aligner': { title:'Aligner Follow-Up Form',    desc:'Edit options for clear aligner review visits' },
+  'form-fu-gmd':     { title:'GMD Follow-Up Form',        desc:'Edit options for growth modification device review visits' },
+  'form-emergency':  { title:'Emergency Visit Form',      desc:'Edit emergency type pills and treatment options' },
+  'form-debond':     { title:'Debond & Retainer Form',    desc:'Edit options for debonding and retention visits' },
+  'reset':           { title:'Reset & Export',            desc:'Export, import, or restore factory settings' },
 };
 
 // ══════════════════════════════════════════════════════════════
